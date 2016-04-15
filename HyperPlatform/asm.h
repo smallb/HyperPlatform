@@ -138,6 +138,13 @@ unsigned char __stdcall AsmInvept(
     _In_ InvEptType invept_type,
     _In_ const InvEptDescriptor *invept_descriptor);
 
+/// Invalidates TLB entries
+/// @param virtual_address  An address to invalidate TLB entries
+void __stdcall AsmInvlpg(_In_ ULONG_PTR virtual_address);
+
+/// Enters sleep indefinitly
+void __stdcall AsmWaitForever();
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // variables
