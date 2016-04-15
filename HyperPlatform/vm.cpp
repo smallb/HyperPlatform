@@ -472,9 +472,9 @@ _Use_decl_annotations_ static bool VmpSetupVMCS(
 
   VmxProcessorBasedControls vm_procctl_requested = {};
   vm_procctl_requested.fields.invlpg_exiting = false;
-  vm_procctl_requested.fields.rdtsc_exiting = false;
+  vm_procctl_requested.fields.rdtsc_exiting = true;
   vm_procctl_requested.fields.cr3_load_exiting = true;
-  vm_procctl_requested.fields.cr8_load_exiting = false;  // NB: very frequent
+  vm_procctl_requested.fields.cr8_load_exiting = true;
   vm_procctl_requested.fields.mov_dr_exiting = true;
   vm_procctl_requested.fields.use_msr_bitmaps = true;
   vm_procctl_requested.fields.activate_secondary_control = true;
@@ -497,7 +497,9 @@ _Use_decl_annotations_ static bool VmpSetupVMCS(
   // - Where a bit is not masked, the actual bit appears
   // VM-exit occurs when a guest modifies any of those fields
   Cr0 cr0_mask = {};
+  cr0_mask.fields.wp = true;  // request VM-exit
   Cr4 cr4_mask = {};
+  cr4_mask.fields.pge = true;  // request VM-exit
 
   // See: PDPTE Registers
   // If PAE paging would be in use following an execution of MOV to CR0 or MOV
@@ -516,7 +518,7 @@ _Use_decl_annotations_ static bool VmpSetupVMCS(
 
   const auto exception_bitmap =
       // 1 << InterruptionVector::kBreakpointException |
-      // 1 << InterruptionVector::kGeneralProtectionException |
+      1 << InterruptionVector::kGeneralProtectionException |
       // 1 << InterruptionVector::kPageFaultException |
       0;
 

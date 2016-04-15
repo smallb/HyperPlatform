@@ -17,6 +17,7 @@
 #define HYPERPLATFORM_PERFORMANCE_ENABLE_PERFCOUNTER 1
 #endif  // HYPERPLATFORM_PERFORMANCE_ENABLE_PERFCOUNTER
 #include "performance.h"
+#include "../../guard_mon.h"
 
 extern "C" {
 ////////////////////////////////////////////////////////////////////////////////
@@ -28,6 +29,13 @@ extern "C" {
 //
 // constants and macros
 //
+
+// Install patch(es) to the kernel so that PatchGuard fires and GuardMon can
+// detect it too. It is, however, mostly for a demonstration purpose because
+// GuardMon cannot always kill PatchGuard. For example, PatchGuard may run with
+// a image region or may not access to CR0 (confirmed on Win10 10586). It means
+// GuardMon is unable to catch PatchGuard's activities.
+static const bool KDriverpInstallPatch = true;
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -67,7 +75,7 @@ _Use_decl_annotations_ NTSTATUS DriverEntry(PDRIVER_OBJECT driver_object,
   UNREFERENCED_PARAMETER(registry_path);
   PAGED_CODE();
 
-  static const wchar_t kLogFilePath[] = L"\\SystemRoot\\HyperPlatform.log";
+  static const wchar_t kLogFilePath[] = L"\\SystemRoot\\GuardMon.log";
   static const auto kLogLevel =
       (IsReleaseBuild()) ? kLogPutLevelInfo | kLogOptDisableFunctionName
                          : kLogPutLevelDebug | kLogOptDisableFunctionName;
@@ -109,9 +117,19 @@ _Use_decl_annotations_ NTSTATUS DriverEntry(PDRIVER_OBJECT driver_object,
     return status;
   }
 
+  // Initialize GuardMon
+  status = GMonInitialization();
+  if (!NT_SUCCESS(status)) {
+    UtilTermination();
+    PerfTermination();
+    LogTermination();
+    return status;
+  }
+
   // Virtualize all processors
   status = VmInitialization();
   if (!NT_SUCCESS(status)) {
+    GMonTermination();
     UtilTermination();
     PerfTermination();
     LogTermination();
@@ -124,6 +142,9 @@ _Use_decl_annotations_ NTSTATUS DriverEntry(PDRIVER_OBJECT driver_object,
   }
 
   HYPERPLATFORM_LOG_INFO("The VMM has been installed.");
+  if (KDriverpInstallPatch) {
+    UtilForEachProcessor(GMonInstallPatchCallback, nullptr);
+  }
   return status;
 }
 
@@ -136,6 +157,7 @@ _Use_decl_annotations_ static void DriverpDriverUnload(
   HYPERPLATFORM_COMMON_DBG_BREAK();
 
   VmTermination();
+  GMonTermination();
   UtilTermination();
   PerfTermination();
   LogTermination();
