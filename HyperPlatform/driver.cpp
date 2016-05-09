@@ -30,13 +30,6 @@ extern "C" {
 // constants and macros
 //
 
-// Install patch(es) to the kernel so that PatchGuard fires and GuardMon can
-// detect it too. It is, however, mostly for a demonstration purpose because
-// GuardMon cannot always kill PatchGuard. For example, PatchGuard may run with
-// a image region or may not access to CR0 (confirmed on Win10 10586). It means
-// GuardMon is unable to catch PatchGuard's activities.
-static const bool KDriverpInstallPatch = true;
-
 ////////////////////////////////////////////////////////////////////////////////
 //
 // types
@@ -142,9 +135,7 @@ _Use_decl_annotations_ NTSTATUS DriverEntry(PDRIVER_OBJECT driver_object,
   }
 
   HYPERPLATFORM_LOG_INFO("The VMM has been installed.");
-  if (KDriverpInstallPatch) {
-    UtilForEachProcessor(GMonInstallPatchCallback, nullptr);
-  }
+  UtilForEachProcessor(GMonInstallPatchCallback, nullptr);
   return status;
 }
 
